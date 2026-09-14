@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url';
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 4317);
 const HOST = process.env.HOST || '127.0.0.1';
-const DATA_FILE = join(ROOT, 'data', 'messages.json');
+// Overridable so tests run against a throwaway file, not the live feed.
+const DATA_FILE = process.env.HUB_DATA_FILE || join(ROOT, 'data', 'messages.json');
 const PUBLIC = join(ROOT, 'public');
 const MAX_BODY = 32 * 1024;
 const TYPES = new Set(['idea', 'contract', 'question', 'blocker', 'update', 'task']);
