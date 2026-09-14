@@ -1,0 +1,6 @@
+data/
+.DS_Store
+node_modules/
+# рабочие заметки по конкретным проектам, не для публикации
+DONE.md
+WORKING_STATE.md

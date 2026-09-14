@@ -1,0 +1,12 @@
+{
+  "name": "agent-hub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Локальная доска координации для агентных проектов",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "check": "node --check server.mjs && node --check public/app.js && node --check hub-worker.mjs",
+    "worker": "node hub-worker.mjs"
+  }
+}

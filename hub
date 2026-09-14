@@ -1,0 +1,39 @@
+#!/bin/bash
+# Короткие команды хаба. Нужны, чтобы агент не набирал длинную строку с флагами
+# и не тратил на это контекст.
+#
+#   ./hub doctor                           диагностика связи: сервер, поток, кто что прочитал
+#   ./hub brief  [имя]                     сводка: кто что делает, что взял с доски, что написал
+#   ./hub check  <имя>                     что нового с прошлого раза (коды 0/2/3)
+#   ./hub peek   <имя>                     то же, но НЕ двигая его закладку (проверка со стороны)
+#   ./hub wait   <имя>                     ждать сообщение (только для агентов с фоновыми процессами)
+#   ./hub say    <имя> <тип> "<текст>"     отправить: update|idea|contract|question|blocker
+#   ./hub accept <id>                      согласиться с чужим контрактом
+#   ./hub close  <id>                      закрыть отработавшее сообщение
+HERE="$(cd "$(dirname "$0")" && pwd)"
+HUB="${HUB:-http://127.0.0.1:4317}"
+SCOPE="${SCOPE:-polynya}"
+cmd="$1"; shift
+
+case "$cmd" in
+  doctor) exec node "$HERE/doctor.mjs" "$SCOPE" ;;
+  brief) exec node "$HERE/brief.mjs" "$SCOPE" "$1" ;;
+  check) exec node "$HERE/wait_for.mjs" --scope="$SCOPE" --me="$1" --once ;;
+  peek)  exec node "$HERE/wait_for.mjs" --scope="$SCOPE" --me="$1" --once --peek ;;
+  wait)  exec node "$HERE/wait_for.mjs" --scope="$SCOPE" --me="$1" \
+           --wake-from=alex,user,human --types=question,blocker --debounce=25 --timeout=3600 ;;
+  say)
+    me="$1"; type="$2"; text="$3"
+    [ ${#text} -gt 500 ] && echo "# длиннее 500 знаков (${#text}): контекст оставляй в файле" && exit 1
+    python3 -c "
+import json,sys,urllib.request
+d=json.dumps({'author':sys.argv[1],'scope':sys.argv[2],'type':sys.argv[3],'text':sys.argv[4]}).encode()
+r=urllib.request.urlopen(urllib.request.Request(sys.argv[5]+'/api/messages',d,{'content-type':'application/json'}))
+print('отправлено #'+str(json.load(r)['message']['id']))
+" "$me" "$SCOPE" "$type" "$text" "$HUB" ;;
+  accept|close)
+    st=$([ "$cmd" = accept ] && echo accepted || echo closed)
+    curl -s -X PATCH "$HUB/api/messages/$1" -H 'content-type: application/json' -d "{\"status\":\"$st\"}" \
+      | python3 -c "import json,sys; m=json.load(sys.stdin)['message']; print('#'+str(m['id']),'→',m['status'])" ;;
+  *) sed -n '2,12p' "$0" ;;
+esac
